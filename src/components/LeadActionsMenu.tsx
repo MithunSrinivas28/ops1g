@@ -4,6 +4,7 @@
 import { useApp } from '@/lib/store';
 import { tourMessageLink, sendTourMessage } from '@/owner/messaging';
 import { Button } from '@/components/ui/button';
+import { waLink } from '@/supply-hub/lib/wa';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MessageCircle, Phone, CalendarPlus, BellRing, MoreVertical, ExternalLink, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,7 +43,7 @@ export function LeadActionsMenu({ lead, size = 'sm' }: Props) {
         <DropdownMenuItem onClick={() => { logCall(lead.id); toast.success(`Call logged for ${lead.name}`); }}>
           <Phone className="h-3.5 w-3.5 mr-2" /> Log call
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => { sendMessage(lead.id, '👋 Quick check-in from Gharpayy'); toast.success('Message sent'); }}>
+        <DropdownMenuItem onClick={() => { window.open(waLink(lead.phone, `Hi ${lead.name}, quick check-in from Gharpayy — any update on your PG search?`), '_blank'); toast.success('WhatsApp opened'); }}>
           <MessageCircle className="h-3.5 w-3.5 mr-2" /> Send check-in
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => selectLead(lead.id)}>
