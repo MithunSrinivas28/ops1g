@@ -122,7 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     "flow-ops": [
       { to: "/today", label: "Today", icon: Sun, badge: queue.length },
       { to: "/inbox", label: "Inbox", icon: Inbox },
-      { to: "/myt/leads", label: "Leads", icon: Target, accent: true },
+      { to: "/leads", label: "Leads", icon: Target, accent: true },
       { to: "/queue", label: "Action Queue", icon: Zap, accent: true },
       { to: "/myt/schedule", label: "Schedule", icon: CalendarPlus },
       { to: "/calendar", label: "Calendar", icon: Calendar },
