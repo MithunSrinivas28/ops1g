@@ -63,6 +63,7 @@ interface AppState {
   advanceSequenceStep: (leadId: string) => void;
 
   closeDeal: (input: { leadId: string; tourId: string; propertyId: string; tcmId: string; amount: number }) => void;
+  addLead: (input: Omit<Lead, "id" | "createdAt" | "updatedAt"> & { id?: string }) => Lead;
 }
 
 export const useApp = create<AppState>((set, get) => ({
@@ -454,6 +455,23 @@ export const useApp = create<AppState>((set, get) => ({
         ? [{ role: sched.actor === "flow-ops" ? "flow-ops" : "tcm", id: sched.actor }]
         : undefined,
     });
+  },
+
+  addLead: (input) => {
+    const lead: Lead = {
+      ...input,
+      id: input.id || uid("l"),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    set((s) => ({ leads: [lead, ...s.leads] }));
+    pushActivity(set, get, {
+      kind: "lead_created",
+      actor: get().role,
+      leadId: lead.id,
+      text: `Lead created: ${lead.name}`,
+    });
+    return lead;
   },
 }));
 

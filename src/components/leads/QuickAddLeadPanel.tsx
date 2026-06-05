@@ -24,6 +24,8 @@ import { Save, Repeat2, Phone, MapPin, Sparkles, X, CalendarPlus } from "lucide-
 import { cn } from "@/lib/utils";
 import { useNavigate } from "@/shims/react-router-dom";
 import { useAppState } from "@/myt/lib/app-context";
+import { useApp } from "@/lib/store";
+import type { LeadStage } from "@/lib/types";
 import { bestInventoryFits, detectAreaZone, recommendedFlowOps, recommendedTcm } from "@/myt/lib/inventory-intelligence";
 import { QUICKAD_NEED_OPTIONS, QUICKAD_ROOM_OPTIONS, QUICKAD_TYPE_OPTIONS, parseBudgetAmount } from "@/lib/quickad-shared";
 import type { ParsedLeadDraft } from "@/lib/lead-identity/types";
@@ -65,10 +67,23 @@ const BLR_OPTS = [
   { v: null, label: "❓ Unknown" },
 ];
 
+const mapMytStageToCrmStage = (mytStage: string): LeadStage => {
+  if (mytStage === "MYT [TENANT]") return "new";
+  if (mytStage.includes("Options Shared")) return "contacted";
+  if (mytStage.includes("Visit Intent")) return "contacted";
+  if (mytStage.includes("Scheduled")) return "tour-scheduled";
+  if (mytStage.includes("Visit Done")) return "tour-done";
+  if (mytStage === "Finalizing") return "negotiation";
+  if (mytStage.includes("WON")) return "booked";
+  if (mytStage.includes("LOST")) return "dropped";
+  return "new";
+};
+
 export function QuickAddLeadPanel({ open, onClose }: Props) {
   const checkDup = useIdentityStore((s) => s.checkDuplicates);
   const create = useIdentityStore((s) => s.createLead);
-  const { rooms, blocks, tours } = useAppState();
+  const { rooms, blocks, tours, leads: mytLeads, setLeads: setMytLeads } = useAppState();
+  const addCrmLead = useApp((s) => s.addLead);
   const navigate = useNavigate();
 
   // Core
@@ -206,6 +221,59 @@ export function QuickAddLeadPanel({ open, onClose }: Props) {
         assigneeName: assignee?.name ?? null,
       },
     );
+
+    // Sync with CRM Zustand store
+    const parsedBudget = parseBudgetAmount(budget) || 10000;
+    const crmStage = mapMytStageToCrmStage(stage);
+    addCrmLead({
+      id: lead.ulid, // Use same id for sync/traceability
+      name: name.trim(),
+      phone: phone.trim(),
+      source: "Quick Add",
+      budget: parsedBudget,
+      moveInDate: moveIn,
+      preferredArea: areasText.trim() || "Unknown",
+      assignedTcmId: assigneeId || "tcm-1",
+      stage: crmStage,
+      intent: quality === "hot" ? "hot" : quality === "good" ? "warm" : "cold",
+      confidence: quality === "hot" ? 80 : quality === "good" ? 50 : 20,
+      tags: [],
+      nextFollowUpAt: null,
+      responseSpeedMins: 5,
+    });
+
+    // Sync with MYT Context store
+    const areaCovered = areaFit?.zone ? true : false;
+    const moveInDateObj = new Date(moveIn);
+    const daysToMoveIn = (moveInDateObj.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    const mytQualified = areaCovered && parsedBudget >= 7000 && daysToMoveIn <= 15;
+    const mytStatus = stage.includes("WON")
+      ? "qualified"
+      : stage.includes("LOST")
+      ? "dead"
+      : stage.includes("Scheduled")
+      ? "tour-scheduled"
+      : mytQualified
+      ? "qualified"
+      : "contacted";
+
+    const newMytLead = {
+      id: lead.ulid, // Use same id for consistency
+      name: name.trim(),
+      phone: phone.trim(),
+      area: areasText.trim().split(",")[0] || "Unknown",
+      budget: parsedBudget,
+      moveInDate: moveIn,
+      dateConfirmed: true,
+      status: mytStatus,
+      mytQualified,
+      addedBy: assigneeId || "m1",
+      addedByName: assignee?.name || "Rahul Sharma",
+      createdAt: new Date().toISOString(),
+      notes: [specialReqs, notes].filter(Boolean).join(" · ") || "",
+    };
+    setMytLeads((prev) => [newMytLead, ...prev]);
+
     toast.success(`Lead saved · ${lead.name}`);
     if (keepOpen) reset(); else onClose();
   };
