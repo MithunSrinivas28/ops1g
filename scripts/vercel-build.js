@@ -49,6 +49,12 @@ writeFileSync(
   JSON.stringify(funcConfig, null, 2)
 );
 
+// Write package.json so Node.js treats server.js as an ES module
+writeFileSync(
+  join(output, "functions", "index.func", "package.json"),
+  JSON.stringify({ type: "module" }, null, 2)
+);
+
 // 5. Create the function entry point that adapts fetch() to Vercel's Node.js interface
 const entryCode = `
 import { Readable } from "node:stream";
