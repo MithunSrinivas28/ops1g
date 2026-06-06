@@ -8,4 +8,11 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   cloudflare: false,
+  vite: {
+    ssr: {
+      // Bundle all third-party dependencies into the server build so the
+      // Vercel serverless function is fully self-contained (no node_modules needed).
+      noExternal: true,
+    },
+  },
 });
